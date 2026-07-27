@@ -1,0 +1,6 @@
+# trase-os-sdk is source-only (NOT on public PyPI). It is installed from the
+# private monorepo and pins its own runtime deps (temporalio, pydantic, httpx,
+# protobuf, redis, opentelemetry-api, attrs, click).
+#
+# The build must have read access to the private repo. See README "Known gaps".
+trase-os-sdk @ git+https://github.com/TraseSystems/trase-monorepo.git#subdirectory=trase-os-sdk/python
