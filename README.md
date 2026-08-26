@@ -70,10 +70,20 @@ and registers it with workflow-service using the enable-step activity names.
 
 ## Known gaps (current agent-deploy pipeline)
 
-Same platform limitations as `trase-tools-a`:
+1. **Private-dependency install — was a Dockerfile bug, now fixed.** Earlier
+   notes here claimed the pipeline supplied no credentials. It does: the build
+   offers the repo's OAuth token as the BuildKit secret `repo_token` (see
+   `DockerClient.REPO_TOKEN_SECRET_ID`). It is deliberately not a `--build-arg`,
+   because build args are recorded in image history and would ship the token to
+   every registry the image reaches. This Dockerfile was reading `ARG
+   GITHUB_TOKEN` and so ignored the secret that was already being passed; it now
+   consumes `repo_token` via a git credential helper.
 
-1. **Private-dependency install.** `trase-os-sdk` is not on public PyPI; the
-   cloud build's plain `docker build` supplies no `GITHUB_TOKEN`, so the SDK
-   clone fails unless the pipeline provides repo credentials another way.
+   Caveat: that is the **legacy** `agent-deploy-worker`'s behaviour. No
+   `repo_token`/`--secret` handling was found in `agent-build-service`, which is
+   what agent-deploy dispatches to today, so a build routed to the new builder
+   may still fail to install the SDK.
 2. **Missing runtime env.** agent-deploy injects only `WORKER_NAME` and
    `TEMPORAL_*`, not `TRASE_WORKFLOW_SERVICE_URL` / `TRASE_INTERNAL_TOKEN`.
+   `worker.py` reads both unconditionally, so the pod exits with `KeyError` on
+   boot even after a successful build, push and Helm rollout.
