@@ -26,13 +26,16 @@ This must match the tool's `name` exactly (case-sensitive).
 
 ```
 .
-├── Dockerfile            # docker build target for the agent-deploy build VM
+├── build.sh              # image build step (ADR 0034; the platform authors the Dockerfile)
+├── run.sh                # container entrypoint
 ├── requirements.txt      # installs trase-os-sdk (source-only, from git)
-├── worker.py             # entrypoint: discovers tools/, starts a Temporal worker
+├── worker.py             # discovers tools/, starts a Temporal worker
 └── tools/
     ├── __init__.py
     └── base64_codec_tool.py
 ```
+
+A repository `Dockerfile` is rejected by agent-build-service (`DOCKERFILE_NOT_ALLOWED`).
 
 ## Local dev (poll loop, no deploy)
 
@@ -64,26 +67,21 @@ trase-os-sdk register-tool ../trase-tools-a/tools/word_counter_tool.py --repo ba
 
 ## Deploy
 
-Push to the default branch. The agent-deploy webhook builds this repo's
-`Dockerfile`, pushes the image to Artifact Registry, Helm-deploys the worker,
-and registers it with workflow-service using the enable-step activity names.
+Push to the default branch. agent-deploy dispatches to agent-build-service,
+which requires repo-root `build.sh` + `run.sh` (with a shebang) and rejects a
+repository Dockerfile. The platform generates the wrapper image, pushes it,
+Helm-deploys the worker, and registers it with workflow-service using the
+enable-step activity names.
 
-## Known gaps (current agent-deploy pipeline)
+## Known gaps
 
-1. **Private-dependency install — was a Dockerfile bug, now fixed.** Earlier
-   notes here claimed the pipeline supplied no credentials. It does: the build
-   offers the repo's OAuth token as the BuildKit secret `repo_token` (see
-   `DockerClient.REPO_TOKEN_SECRET_ID`). It is deliberately not a `--build-arg`,
-   because build args are recorded in image history and would ship the token to
-   every registry the image reaches. This Dockerfile was reading `ARG
-   GITHUB_TOKEN` and so ignored the secret that was already being passed; it now
-   consumes `repo_token` via a git credential helper.
-
-   Caveat: that is the **legacy** `agent-deploy-worker`'s behaviour. No
-   `repo_token`/`--secret` handling was found in `agent-build-service`, which is
-   what agent-deploy dispatches to today, so a build routed to the new builder
-   may still fail to install the SDK.
-2. **Missing runtime env.** agent-deploy injects only `WORKER_NAME` and
-   `TEMPORAL_*`, not `TRASE_WORKFLOW_SERVICE_URL` / `TRASE_INTERNAL_TOKEN`.
-   `worker.py` reads both unconditionally, so the pod exits with `KeyError` on
-   boot even after a successful build, push and Helm rollout.
+1. **Private SDK install.** `requirements.txt` clones `trase-os-sdk` from the
+   private monorepo. The legacy `agent-deploy-worker` offered that token as the
+   BuildKit secret `repo_token`. agent-build-service does not, so `build.sh`'s
+   `pip install` may still fail on the new builder until the SDK is reachable
+   without a GitHub credential (hash-pinned public deps, as in
+   `TraseSystems/agent-build-e2e-fixture`).
+2. **Missing runtime env (may be stale).** Older notes said agent-deploy did
+   not inject `TRASE_WORKFLOW_SERVICE_URL` / `TRASE_INTERNAL_TOKEN`. Confirm
+   against the current `WorkloadValuesBuilder` before treating a boot
+   `KeyError` as expected.
