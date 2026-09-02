@@ -41,7 +41,7 @@ A repository `Dockerfile` is rejected by agent-build-service (`DOCKERFILE_NOT_AL
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt        # needs access to the private monorepo
+pip install -r requirements.txt        # needs read access to TraseSystems/trase-os-sdk
 trase-os-sdk login
 trase-os-sdk run-tool tools/base64_codec_tool.py
 ```
@@ -75,12 +75,16 @@ enable-step activity names.
 
 ## Known gaps
 
-1. **Private SDK install.** `requirements.txt` clones `trase-os-sdk` from the
-   private monorepo. The legacy `agent-deploy-worker` offered that token as the
-   BuildKit secret `repo_token`. agent-build-service does not, so `build.sh`'s
-   `pip install` may still fail on the new builder until the SDK is reachable
-   without a GitHub credential (hash-pinned public deps, as in
-   `TraseSystems/agent-build-e2e-fixture`).
+1. **Private SDK install.** `requirements.txt` installs `trase-os-sdk` from
+   `TraseSystems/trase-os-sdk` over `git+https`. agent-build-service mints a
+   GitHub App installation token per build and hands it to `build.sh` as a
+   BuildKit secret, so no credential lives in this repo. It still needs the SDK
+   App configured on the build VM and a tool base image carrying `git`; until
+   both are in place the `pip install` fails inside the build.
+
+   The requirement must name the SDK repository, not the monorepo — the App is
+   installed on `TraseSystems/trase-os-sdk` alone, so any other repository is
+   refused with `Repository not found` even with a valid token.
 2. **Missing runtime env (may be stale).** Older notes said agent-deploy did
    not inject `TRASE_WORKFLOW_SERVICE_URL` / `TRASE_INTERNAL_TOKEN`. Confirm
    against the current `WorkloadValuesBuilder` before treating a boot

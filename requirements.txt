@@ -1,6 +1,13 @@
 # trase-os-sdk is source-only (NOT on public PyPI). It is installed from the
-# private monorepo and pins its own runtime deps (temporalio, pydantic, httpx,
-# protobuf, redis, opentelemetry-api, attrs, click).
+# private SDK repository and pins its own runtime deps (temporalio, pydantic,
+# httpx, protobuf, redis, opentelemetry-api, attrs, click).
 #
-# The build must have read access to the private repo. See README "Known gaps".
-trase-os-sdk @ git+https://github.com/TraseSystems/trase-monorepo.git#subdirectory=trase-os-sdk/python
+# No credential belongs in this file. agent-build-service mints a GitHub App
+# installation token per build and hands it to build.sh as a BuildKit secret,
+# rewriting github.com URLs for the length of that one step.
+#
+# The repository here is load bearing: the App is installed on
+# TraseSystems/trase-os-sdk ALONE, so a requirement naming any other repo (the
+# monorepo, for instance) is refused with "Repository not found" even though
+# the token itself is valid.
+trase-os-sdk @ git+https://github.com/TraseSystems/trase-os-sdk.git@v0.3.1#subdirectory=python
