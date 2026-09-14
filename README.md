@@ -30,12 +30,68 @@ This must match the tool's `name` exactly (case-sensitive).
 ├── run.sh                # container entrypoint
 ├── requirements.txt      # installs trase-os-sdk (source-only, from git)
 ├── worker.py             # discovers tools/, starts a Temporal worker
-└── tools/
-    ├── __init__.py
-    └── base64_codec_tool.py
+├── tools/
+│   ├── __init__.py
+│   └── base64_codec_tool.py
+└── trase-tools-b-langchain-agent/   # agent bundle — a separate artifact (see below)
+    ├── trase-agent.yaml
+    ├── requirements.txt
+    └── agent/
+        ├── __init__.py
+        ├── agent.py                 # stock LangChain; knows nothing about Trase
+        └── main.py                  # entrypoint shim: env aliasing for governed egress
 ```
 
 A repository `Dockerfile` is rejected by agent-build-service (`DOCKERFILE_NOT_ALLOWED`).
+
+## Sample LangChain agent (agent bundle)
+
+`trase-tools-b-langchain-agent/` is a **sample agent bundle**, not a tool. It
+rides a different lifecycle from everything else in this repo: the tool worker
+above is built from root `build.sh`/`run.sh` and deployed by agent-deploy; a
+bundle is zipped and pushed to the **agent registry** (`trase-os-sdk build` /
+`release`), which builds it from the bundle's own `requirements.txt` and
+launches its `entrypoint`. The two do not interact — the bundle is here as a
+worked example, and adding it changes nothing about the worker's deploy.
+
+The manifest is the whole contract:
+
+```yaml
+name: trase-tools-b-langchain-agent   # [a-z0-9][a-z0-9-]{0,63}
+framework: langchain                  # metadata only — the build is framework-agnostic
+entrypoint: agent.main:run            # <module>:<callable>, invocable with NO arguments
+```
+
+`framework` is never a build gate, and `entrypoint` must name a *callable*, not
+an already-constructed app instance — the launcher calls whatever it names at
+container start, so an instance raises `TypeError` instead of serving.
+
+### The egress shim is the point
+
+The platform injects `TRASE_OPENAI_BASE_URL` and `TRASE_RUN_ID`; the OpenAI SDK
+reads `OPENAI_BASE_URL` and `OPENAI_API_KEY`. `agent/main.py` aliases one pair
+onto the other and nothing else, so `agent/agent.py` stays a stock LangChain
+agent with no Trase imports and no base_url/api_key threaded through it. Wrap,
+don't edit. If the platform ever injected the SDK-standard names, `main.py`
+would disappear and `entrypoint` could point straight at the agent.
+
+The agent calls one tool (`base64_codec`, mirroring the worker's `Base64Codec`)
+so the sample exercises a real tool-call turn rather than a bare completion.
+
+### Publish it
+
+```bash
+trase-os-sdk login
+trase-os-sdk publish ./trase-tools-b-langchain-agent   # build, then release (irreversible)
+```
+
+Or the two-step form when you want to inspect the image before burning a
+version number:
+
+```bash
+trase-os-sdk build ./trase-tools-b-langchain-agent
+trase-os-sdk release trase-tools-b-langchain-agent
+```
 
 ## Local dev (poll loop, no deploy)
 

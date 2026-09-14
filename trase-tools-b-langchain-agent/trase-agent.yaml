@@ -1,0 +1,3 @@
+name: trase-tools-b-langchain-agent
+framework: langchain
+entrypoint: agent.main:run
