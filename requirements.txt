@@ -10,4 +10,4 @@
 # TraseSystems/trase-os-sdk ALONE, so a requirement naming any other repo (the
 # monorepo, for instance) is refused with "Repository not found" even though
 # the token itself is valid.
-trase-os-sdk @ git+https://github.com/TraseSystems/trase-os-sdk.git@v0.3.1#subdirectory=python
+trase-os-sdk @ git+https://github.com/TraseSystems/trase-os-sdk.git@v0.3.0#subdirectory=python
