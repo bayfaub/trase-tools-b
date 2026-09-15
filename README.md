@@ -78,6 +78,15 @@ would disappear and `entrypoint` could point straight at the agent.
 The agent calls one tool (`base64_codec`, mirroring the worker's `Base64Codec`)
 so the sample exercises a real tool-call turn rather than a bare completion.
 
+A sandboxed run leaves no trace except what it logs, so the agent logs the
+egress base URL, the prompt, each tool invocation, token usage and the
+completion — matching the reference agents in the monorepo's
+`core/workflows/test_examples/third_party_agents/`. It also asserts the final
+content is a non-empty string: `content` of `""` is not `None`, so without that
+check the launcher prints a blank line and a silent failure is indistinguishable
+from success. `TRASE_RUN_ID` is the run credential and is deliberately never
+logged.
+
 ### Publish it
 
 ```bash
