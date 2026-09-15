@@ -10,14 +10,16 @@ Task queue: **`bayfaub-trase-tools-b-queue`**
 
 ## Tools served
 
-| Tool `name`   | File                          | What it does                       |
-| ------------- | ----------------------------- | ---------------------------------- |
-| `Base64Codec` | `tools/base64_codec_tool.py`  | Base64-encode or -decode a string  |
+| Tool `name`       | File                              | What it does                                   |
+| ----------------- | --------------------------------- | ---------------------------------------------- |
+| `Base64Codec`     | `tools/base64_codec_tool.py`      | Base64-encode or -decode a string              |
+| `WeatherForecast` | `tools/weather_forecast_tool.py`  | NWS point forecast for a US latitude/longitude |
 
 **Enable-webhook activity list** (paste into the "tool/activity names" modal):
 
 ```
 Base64Codec
+WeatherForecast
 ```
 
 This must match the tool's `name` exactly (case-sensitive).

@@ -11,3 +11,7 @@
 # monorepo, for instance) is refused with "Repository not found" even though
 # the token itself is valid.
 trase-os-sdk @ git+https://github.com/TraseSystems/trase-os-sdk.git@v0.3.0#subdirectory=python
+
+# Used directly by tools/weather_forecast_tool.py. The SDK happens to pin httpx
+# too, but a direct import belongs in this file rather than riding a transitive.
+httpx
