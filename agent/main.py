@@ -19,9 +19,12 @@ LangChain agent with no Trase imports. Wrap, don't edit.
    Promtail Stage 4b and the observability module's extraRelabelConfigs —
    the platform deliberately does not trust sandboxed code to self-report it.
 
-2. Egress. The platform injects TRASE_OPENAI_BASE_URL and TRASE_RUN_ID; the
-   OpenAI SDK reads OPENAI_BASE_URL and OPENAI_API_KEY. TRASE_RUN_ID doubles as
-   the run credential, so it is never logged — only the base URL.
+2. Egress. Unlike the OpenAI path, google-genai 2.x exposes no environment
+   variable for the base URL, so TRASE_VERTEX_BASE_URL cannot be aliased here —
+   agent/agent.py threads it and the run credential through client construction
+   itself (ADR 0045 exists to remove exactly that per-SDK cost). This shim only
+   reads it to log where egress is pointed. TRASE_RUN_ID doubles as the run
+   credential, so it is never logged.
 """
 
 import json
@@ -69,10 +72,7 @@ def configure_json_logging() -> None:
 def run() -> str:
     configure_json_logging()
 
-    base_url = os.environ["TRASE_OPENAI_BASE_URL"]
-    os.environ["OPENAI_BASE_URL"] = base_url
-    os.environ["OPENAI_API_KEY"] = os.environ["TRASE_RUN_ID"]
-    log.info("openai egress through %s", base_url)
+    log.info("vertex egress through %s", os.environ["TRASE_VERTEX_BASE_URL"])
 
     from agent.agent import main
 

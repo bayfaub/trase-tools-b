@@ -1,2 +1,2 @@
-langchain
-langchain-openai
+google-adk
+google-genai
